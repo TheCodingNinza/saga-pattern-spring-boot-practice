@@ -1,12 +1,7 @@
 package com.saurabhsameer.orders.saga;
 
-import com.saurabhsameer.core.dto.commands.ApproveOrderCommand;
-import com.saurabhsameer.core.dto.commands.ProcessPaymentCommand;
-import com.saurabhsameer.core.dto.commands.ReserveProductCommand;
-import com.saurabhsameer.core.dto.events.OrderApprovedEvent;
-import com.saurabhsameer.core.dto.events.OrderCreatedEvent;
-import com.saurabhsameer.core.dto.events.PaymentProcessedEvent;
-import com.saurabhsameer.core.dto.events.ProductsReservedEvent;
+import com.saurabhsameer.core.dto.commands.*;
+import com.saurabhsameer.core.dto.events.*;
 import com.saurabhsameer.core.types.OrderStatus;
 import com.saurabhsameer.orders.service.OrderHistoryService;
 import org.springframework.beans.factory.annotation.Value;
@@ -74,7 +69,28 @@ public class OrderSaga {
     }
 
     @KafkaHandler
+    public void handleEvent(@Payload PaymentFailedEvent event){
+        CancelProductReservationCommand cancelProductReservationCommand = new CancelProductReservationCommand(
+                event.getProductId(),
+                event.getOrderId(),
+                event.getProductQuantity()
+        );
+        kafkaTemplate.send(productsCommandTopicName, cancelProductReservationCommand);
+    }
+
+    @KafkaHandler
     public void handleEvent(@Payload OrderApprovedEvent event){
+
         orderHistoryService.add(event.getOrderId(), OrderStatus.APPROVED);
+
+    }
+
+    @KafkaHandler
+    public void handleEvent(@Payload ProductReservationCancelledEvent event){
+
+        RejectOrderCommand rejectOrderCommand = new RejectOrderCommand(event.getOrderId());
+        kafkaTemplate.send(ordersCommandsTopicName, rejectOrderCommand);
+        orderHistoryService.add(event.getOrderId(), OrderStatus.REJECTED);
+
     }
 }

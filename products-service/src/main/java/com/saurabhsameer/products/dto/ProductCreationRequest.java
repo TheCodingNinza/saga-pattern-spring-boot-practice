@@ -21,6 +21,9 @@ public class ProductCreationRequest {
         this.quantity = quantity;
     }
 
+    public ProductCreationRequest() {
+    }
+
     public String getName() {
         return name;
     }
